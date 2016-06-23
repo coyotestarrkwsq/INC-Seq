@@ -26,12 +26,14 @@ def best_aln(aln):
                 best_alignment = l
                 best_e = evalue
     return best_alignment
-
+#record: seqIO for 1 read fasta seq  #ref_achor: anchor seq fasta file # seqlen: len of record #qu
 def find_unit_blastn(record, ref_anchor, tmp_folder, seqlen, query_seg_step, query_len, anchor_cov):
     tmpname = tmp_folder + hashlib.md5(record.id).hexdigest() + ".tmp"
     tmpRef = tmpname + ".ref.fasta"
     tmpQ = tmpname + ".q.fasta"
     blastOutFMT = '6 sseqid sstart send slen qstart qend qlen evalue score length nident mismatch gaps'
+    hasAnchor = True
+
 
     alignments = {'alignments':'\n', 'number':0}
 
@@ -39,6 +41,9 @@ def find_unit_blastn(record, ref_anchor, tmp_folder, seqlen, query_seg_step, que
     with open(tmpRef, "w") as ref_handle:
         SeqIO.write(record, ref_handle, "fasta")
 
+
+    best_alignment = ''    
+    
     if ref_anchor:
         extend = 400
         ## ref anchor is provided
@@ -47,21 +52,25 @@ def find_unit_blastn(record, ref_anchor, tmp_folder, seqlen, query_seg_step, que
         stdout = blastn(ref_anchor, tmpRef, None, blastOutFMT,
                         1, anchor_cov, False)
         best_alignment=best_aln(stdout)
-        if best_alignment != '':
-            s_start = int((best_aln(stdout)).split()[1])
-            with open(tmpQ, 'w') as q_handle:
-                qrecord = SeqRecord(record.seq[s_start:s_start+extend],
-                                    record.id+ "RefAnchor",
-                                    description= "")
-                SeqIO.write(qrecord, q_handle, "fasta")
-            stdout = blastn(tmpQ, tmpRef, None, blastOutFMT,
-                            seqlen/query_len + 1, anchor_cov, False)
-        alignments['number'] = max(stdout.count('\n') - 1,0)
-        alignments['alignments'] = stdout
+
+    if best_alignment != '':
+        s_start = int((best_aln(stdout)).split()[1])
+        with open(tmpQ, 'w') as q_handle:
+            qrecord = SeqRecord(record.seq[s_start:s_start+extend],
+                                record.id+ "RefAnchor",
+                                description= "")
+            SeqIO.write(qrecord, q_handle, "fasta")
+        stdout = blastn(tmpQ, tmpRef, None, blastOutFMT,
+                    seqlen/query_len + 1, anchor_cov, False)
+    alignments['number'] = max(stdout.count('\n') - 1,0)
+    alignments['alignments'] = stdout
+    
     else:
         ## try different anchors
         starts = xrange(0, seqlen/2, query_seg_step)
-        
+    
+        hasAnchor=False
+
         for start in starts:
             ## write the query seq
             with open(tmpQ, 'w') as q_handle:
@@ -80,7 +89,7 @@ def find_unit_blastn(record, ref_anchor, tmp_folder, seqlen, query_seg_step, que
     tmp = subprocess.check_output("rm  %s*" % (tmpname), shell = True)
     sys.stderr.write("Max number of segments found: %i \n" % (alignments['number']))
     if alignments['alignments'] != '\n' and alignments['alignments'] != '':
-        return alignments['alignments']
+        return alignments['alignments'], hasAnchor
     return None
 
 ################################################################################

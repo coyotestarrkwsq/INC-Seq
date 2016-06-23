@@ -17,6 +17,20 @@ def get_tmp(program):
     tmp_folder += program + program_time + "/"
     return tmp_folder
 
+def add_anchor_info(fa):
+    ## if constructed with anchor, indicate that the orientation is correct
+    """
+    add indicator to the fa
+    """
+
+    consensusList = fa.split("\n")
+
+    consensusList= map(lambda x: (x+" T" if x[0]==">" else x) , consensusList)
+
+    fa="\n".join(consensusList)         
+
+    return fa
+
 def callBuildConsensus(aligner, record, aln, copy_num_thre, len_diff_thre, tmp_folder, seg_cov, iterative):
     if aligner == "blastn":
         consensus = buildConsensus.consensus_blastn(record, aln, copy_num_thre,
@@ -125,13 +139,13 @@ def main(arguments):
             if args.aligner == "blastn" or args.aligner == "graphmap" or args.aligner =="poa" or args.aligner == "marginAlign": ## FIXME graphmap implementation
                 if args.anchor_seq:
                     ## anchor sequence provided, run with INC-Seq2 mode
-                    aln = findUnit.find_unit_blastn(record, args.anchor_seq, tmp_folder, seqlen,
+                    aln, has_anchor = findUnit.find_unit_blastn(record, args.anchor_seq, tmp_folder, seqlen,
                                                     args.anchor_seg_step,
                                                     args.anchor_len,
                                                     args.anchor_cov)
                 else:
                     ## use subsequences as anchors (INC-Seq mode)
-                    aln = findUnit.find_unit_blastn(record, None, tmp_folder, seqlen,
+                    aln, has_anchor = findUnit.find_unit_blastn(record, None, tmp_folder, seqlen,
                                                     args.anchor_seg_step,
                                                     args.anchor_len,
                                                     args.anchor_cov)
@@ -148,6 +162,8 @@ def main(arguments):
  
             if consensus:                    
                     sys.stderr.write("Consensus called\t%s\tNumber of segments\t%d\n" %(record.id, consensus[1]))
+                    if has_anchor:
+                        consensus[0] = add_anchor_info(consensus[0]) 
                     args.outFile.write(consensus[0])
             else:
                 sys.stderr.write("Consensus construction failed!\n")
