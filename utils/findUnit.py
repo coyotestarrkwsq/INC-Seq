@@ -43,7 +43,6 @@ def find_unit_blastn(record, ref_anchor, tmp_folder, seqlen, query_seg_step, que
 
 
     best_alignment = ''    
-    
     if ref_anchor:
         extend = 400
         ## ref anchor is provided
@@ -62,16 +61,16 @@ def find_unit_blastn(record, ref_anchor, tmp_folder, seqlen, query_seg_step, que
             SeqIO.write(qrecord, q_handle, "fasta")
         stdout = blastn(tmpQ, tmpRef, None, blastOutFMT,
                     seqlen/query_len + 1, anchor_cov, False)
-    alignments['number'] = max(stdout.count('\n') - 1,0)
-    alignments['alignments'] = stdout
+   	alignments['number'] = max(stdout.count('\n') - 1,0)
+    	alignments['alignments'] = stdout
     
     else:
         ## try different anchors
         starts = xrange(0, seqlen/2, query_seg_step)
-    
-        hasAnchor=False
+	hasAnchor=False
 
         for start in starts:
+	    print "hi"	
             ## write the query seq
             with open(tmpQ, 'w') as q_handle:
                 qrecord = SeqRecord(record.seq[start:(start+query_len)],
@@ -89,8 +88,10 @@ def find_unit_blastn(record, ref_anchor, tmp_folder, seqlen, query_seg_step, que
     tmp = subprocess.check_output("rm  %s*" % (tmpname), shell = True)
     sys.stderr.write("Max number of segments found: %i \n" % (alignments['number']))
     if alignments['alignments'] != '\n' and alignments['alignments'] != '':
-        return alignments['alignments'], hasAnchor
-    return None
+	return alignments['alignments'], hasAnchor
+    
+    print True
+    return None, None
 
 ################################################################################
 

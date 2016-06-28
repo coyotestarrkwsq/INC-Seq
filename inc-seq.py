@@ -23,12 +23,12 @@ def add_anchor_info(fa):
     add indicator to the fa
     """
 
-    consensusList = fa.split("\n")
-
+    consensusList = fa.split("\n")[:-1]
     consensusList= map(lambda x: (x+" T" if x[0]==">" else x) , consensusList)
 
+    
     fa="\n".join(consensusList)         
-
+    fa+="\n"
     return fa
 
 def callBuildConsensus(aligner, record, aln, copy_num_thre, len_diff_thre, tmp_folder, seg_cov, iterative):
@@ -128,7 +128,9 @@ def main(arguments):
     if args.segments_only:
         outH = open("inc_seq.segments.fa", "w")
     for record in seqs:
+	
         seqlen = len(record.seq)
+
         sys.stderr.write("---------- Processing read %i ----------\n" % (counter + 1))
         counter += 1
         if seqlen < args.minRL:
@@ -139,17 +141,20 @@ def main(arguments):
             if args.aligner == "blastn" or args.aligner == "graphmap" or args.aligner =="poa" or args.aligner == "marginAlign": ## FIXME graphmap implementation
                 if args.anchor_seq:
                     ## anchor sequence provided, run with INC-Seq2 mode
+	
                     aln, has_anchor = findUnit.find_unit_blastn(record, args.anchor_seq, tmp_folder, seqlen,
                                                     args.anchor_seg_step,
                                                     args.anchor_len,
                                                     args.anchor_cov)
                 else:
                     ## use subsequences as anchors (INC-Seq mode)
+
+		    print True
                     aln, has_anchor = findUnit.find_unit_blastn(record, None, tmp_folder, seqlen,
                                                     args.anchor_seg_step,
                                                     args.anchor_len,
                                                     args.anchor_cov)
-
+	
             #### build consensus
             if args.segments_only:
                 tmp = buildConsensus.segmentize(record, aln, args.copy_num_thre, args.len_diff_thre,
@@ -163,8 +168,11 @@ def main(arguments):
             if consensus:                    
                     sys.stderr.write("Consensus called\t%s\tNumber of segments\t%d\n" %(record.id, consensus[1]))
                     if has_anchor:
-                        consensus[0] = add_anchor_info(consensus[0]) 
-                    args.outFile.write(consensus[0])
+                        output = add_anchor_info(consensus[0])
+                    	args.outFile.write(output)
+		    else:
+			print "hello world!"
+			args.outFile.write(consensus[0])	
             else:
                 sys.stderr.write("Consensus construction failed!\n")
     if args.segments_only:
