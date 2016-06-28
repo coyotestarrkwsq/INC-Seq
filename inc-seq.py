@@ -149,7 +149,6 @@ def main(arguments):
                 else:
                     ## use subsequences as anchors (INC-Seq mode)
 
-		    print True
                     aln, has_anchor = findUnit.find_unit_blastn(record, None, tmp_folder, seqlen,
                                                     args.anchor_seg_step,
                                                     args.anchor_len,
@@ -171,7 +170,6 @@ def main(arguments):
                         output = add_anchor_info(consensus[0])
                     	args.outFile.write(output)
 		    else:
-			print "hello world!"
 			args.outFile.write(consensus[0])	
             else:
                 sys.stderr.write("Consensus construction failed!\n")

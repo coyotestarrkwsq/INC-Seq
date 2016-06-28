@@ -70,7 +70,6 @@ def find_unit_blastn(record, ref_anchor, tmp_folder, seqlen, query_seg_step, que
 	hasAnchor=False
 
         for start in starts:
-	    print "hi"	
             ## write the query seq
             with open(tmpQ, 'w') as q_handle:
                 qrecord = SeqRecord(record.seq[start:(start+query_len)],
@@ -90,7 +89,6 @@ def find_unit_blastn(record, ref_anchor, tmp_folder, seqlen, query_seg_step, que
     if alignments['alignments'] != '\n' and alignments['alignments'] != '':
 	return alignments['alignments'], hasAnchor
     
-    print True
     return None, None
 
 ################################################################################
