@@ -34,10 +34,12 @@ def main(arguments):
     for line in h:
         fields = line.strip().split()
         record = dict(zip(blastOutFMT, fields))
-
-        output = [record['sseqid'], record['slen'], record['sstart'], record['send'], ]
-        output += [ '+' if int(record['sstart']) < int(record['send']) else '-']
-        output += [record['qseqid'], record['qlen'], record['qstart'], record['qend'], '+']
+        output = [record['sseqid'], record['slen']] ## FIXME: 0 indexing, half open
+        if int(record['sstart']) < int(record['send']):
+            output += [ str(int(record['sstart'])-1), record['send'], "+ "]
+        else:
+            output += [ str(int(record['send'])-1), record['sstart'], "- "]
+        output += [record['qseqid'], record['qlen'], str(int(record['qstart'])-1), record['qend'], '+']
         output += ['-3000']  ## a fake score
         output += [record['nident'], record['mismatch']]
         output += [str(record['qseq'].count('-'))]
