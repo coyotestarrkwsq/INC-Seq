@@ -24,18 +24,18 @@ def add_anchor_info(fa):
     """
 
     consensusList = fa.split("\n")[:-1]
-    consensusList= map(lambda x: (x+" T" if x[0]==">" else x) , consensusList)
+    consensusList= map(lambda x: (x+"_T" if x[0]==">" else x) , consensusList)
 
     
     fa="\n".join(consensusList)         
     fa+="\n"
     return fa
 
-def callBuildConsensus(aligner, record, aln, copy_num_thre, len_diff_thre, tmp_folder, seg_cov, iterative):
+def callBuildConsensus(aligner, record, aln, copy_num_thre, len_diff_thre, tmp_folder, seg_cov, iterative, consensus_builder):
     if aligner == "blastn":
         consensus = buildConsensus.consensus_blastn(record, aln, copy_num_thre,
                                                     len_diff_thre, tmp_folder,
-                                                    seg_cov, iterative)
+                                                    seg_cov, iterative, consensus_builder)
     elif aligner == "graphmap":
         consensus = buildConsensus.consensus_graphmap(record, aln, copy_num_thre,
                                                       len_diff_thre, tmp_folder,
@@ -113,6 +113,11 @@ def main(arguments):
                         default = 0.05,
                         type = float,
                         help="Segment length deviation from the median to be considered as concordant [Default: 0.05]")
+    parser.add_argument("-c", "--consensusBuilder",
+                        default='pbdagcon',
+                        dest="consensusBuilder",
+                        help="The aligner used (pbdagcon, Sparc) [Default: pbdagcon]")
+
 
     args = parser.parse_args(arguments)
     
@@ -141,7 +146,6 @@ def main(arguments):
             if args.aligner == "blastn" or args.aligner == "graphmap" or args.aligner =="poa" or args.aligner == "marginAlign": ## FIXME graphmap implementation
                 if args.anchor_seq:
                     ## anchor sequence provided, run with INC-Seq2 mode
-	
                     aln, has_anchor = findUnit.find_unit_blastn(record, args.anchor_seq, tmp_folder, seqlen,
                                                     args.anchor_seg_step,
                                                     args.anchor_len,
@@ -162,7 +166,7 @@ def main(arguments):
                 continue #skip consensus building
             consensus = callBuildConsensus(args.aligner, record, aln, args.copy_num_thre,
                                            args.len_diff_thre, tmp_folder,
-                                           args.seg_cov, args.iterative)
+                                           args.seg_cov, args.iterative, args.consensusBuilder)
  
             if consensus:                    
                     sys.stderr.write("Consensus called\t%s\tNumber of segments\t%d\n" %(record.id, consensus[1]))

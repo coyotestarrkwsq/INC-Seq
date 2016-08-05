@@ -218,8 +218,33 @@ def pbdagcon(m5, t):
     stdout, stderr = proc.communicate()
     if proc.returncode != 0:
         stdout = pbdagcon(m5, t+1)
+
+    proc.stdout.close()
     return stdout
+
+
+def sparc(m5, backbone):
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    consensus_file = m5.replace(".m5", "")
+
+    cmd = ("%s/Sparc b %s m %s k 2 g 2 c 2 t 0.1 o %s" % (script_dir, backbone, m5, consensus_file))
+    tmp = subprocess.check_output(cmd, shell=True)
+    consensus_file+=".consensus.fasta"
+    stdout = subprocess.check_output("cat %s" % (consensus_file), shell=True)
+
+#    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+
+    return stdout
+
+
+#def blasr(backbone, ref):
+    	
+#    cmd = ("blasr -nproc 1 %s %s -bestn 1 -m 5 -minMatch 19") % (ref, backbone) 
+#    stdout = subprocess.check_output(cmd, shell=True)	
+
+#    return stdout	
     
+
 def segmentize(record, alnFile, copy_num_thre, len_diff_thre, outH):
     ## only extract segments without building consensus
     seg_coordinates = segment_filters(alnFile, copy_num_thre, len_diff_thre)
@@ -234,7 +259,7 @@ def segmentize(record, alnFile, copy_num_thre, len_diff_thre, outH):
     return 1
     
 #---------------------------------------------------------------------
-def consensus_blastn(record, alnFile, copy_num_thre, len_diff_thre, tmp_folder, seg_cov, iterative):
+def consensus_blastn(record, alnFile, copy_num_thre, len_diff_thre, tmp_folder, seg_cov, iterative, consensus_builder):
     seg_coordinates = segment_filters(alnFile, copy_num_thre, len_diff_thre)
     if not seg_coordinates:
         return None
@@ -250,7 +275,7 @@ def consensus_blastn(record, alnFile, copy_num_thre, len_diff_thre, tmp_folder, 
     ## three fields added to facilate convertion to blasr m5 format
     blastOutFMT = '6 sseqid sstart send slen qstart qend qlen evalue score length nident mismatch gaps sseq qseq qseqid'
     ## try using each subread as the backbone
-    alignments = {"alignments":'\n',"num":0, "errors":sys.maxint}
+    alignments = {"alignments":'\n',"num":0, "errors":sys.maxint, "backbone":"\n" }
     subReads = []
 
     counter = 0
@@ -262,32 +287,46 @@ def consensus_blastn(record, alnFile, copy_num_thre, len_diff_thre, tmp_folder, 
         subReads.append(subRead)
         SeqIO.write(subRead, ref_handle, "fasta")
     ref_handle.close()
+
     # blast alignment
     for subRead in subReads:
         q_handle = open(tmpQ, 'w')
         SeqIO.write(subRead, q_handle, "fasta")
         q_handle.close()
         stdout = blastn(tmpQ, tmpRef, None, blastOutFMT, seg_num, seg_cov, True)
+#	stdout = blasr(tmpQ, tmpRef)
+
+
         num = stdout.count('\n') - 1
         errors = get_errors(stdout)
+
         if num > alignments["num"]:
             # prefer more alignments
             alignments["num"] = num
             alignments["error"] = errors
             alignments["alignments"] = stdout
+	    alignments["backbone"] = subRead
+
         elif num == alignments["num"]:
             # for the same number of alignments, prefer the one with lower error rates
             if errors < alignments["errors"]:
                     alignments["num"] = num
                     alignments["error"] = errors
                     alignments["alignments"] = stdout              
-        
+        	    alignments["backbone"] = subRead
+	
     copy_num = alignments["alignments"].count("\n")
     if copy_num >= copy_num_thre:
         with open(tmpname + '.m5', 'w') as outH:
             outH.write(post_processing(alignments["alignments"]))
-        consensus = pbdagcon(tmpname+'.m5', 0)
-
+	if consensus_builder == "pbdagcon":
+	    consensus = pbdagcon(tmpname+'.m5', 0)
+	elif consensus_builder == "Sparc":
+       	    q_handle = open(tmpQ, 'w')
+            SeqIO.write(alignments["backbone"], q_handle, "fasta")
+            q_handle.close()
+	    consensus = sparc(tmpname+'.m5', tmpQ) 
+	
         ## run iteratively
         #----------------------------------------
         # write consensus seq 0
